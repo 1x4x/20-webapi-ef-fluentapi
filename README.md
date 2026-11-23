@@ -95,6 +95,35 @@ curl -X POST http://localhost:5000/api/namedays -H "Content-Type: application/js
 
 The date route uses `month/day` order, including February 29 validation. `/today` uses the server's local clock. CRUD routes are currently unauthenticated, as in the existing starter API; add authentication before exposing them publicly.
 
+## 🎂 Birthdays CRUD API
+
+Birthdays are stored in `App_Data/birthdays.json` (created on the first write). The EF Core `BirthdayConfiguration` provides Fluent API mapping, while the JSON store handles persistence independently.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| 🟢 GET | `/api/birthdays` | List birthdays, sorted by next celebration |
+| 🔎 GET | `/api/birthdays?search=anna` | Search names |
+| 🎉 GET | `/api/birthdays/today` | Today's birthdays |
+| 📅 GET | `/api/birthdays/upcoming?days=30` | Upcoming birthdays (0–366 days) |
+| 🟢 GET | `/api/birthdays/{id}` | Get a birthday |
+| 🔵 POST | `/api/birthdays` | Create |
+| 🟠 PUT | `/api/birthdays/{id}` | Update |
+| 🔴 DELETE | `/api/birthdays/{id}` | Delete |
+
+**Create example** (`POST /api/birthdays`):
+
+```json
+{
+  "name": "Anna",
+  "dateOfBirth": "1990-06-15",
+  "notes": "Friend from school"
+}
+```
+
+Responses include `id`, `age`, `nextBirthday`, `turningAge`, and `daysUntilBirthday`. Dates are ISO `YYYY-MM-DD`. Birthdays on February 29 are observed on **February 28** in non-leap years. Calculations use the server's local date.
+
+⚠️ **Privacy and security:** Birthday dates and notes are personal information. This starter's endpoints are unauthenticated, so do not deploy with real personal data on a public server until authentication, authorization, and access controls are implemented.
+
 ## 🎨 Branding
 
 - 🐸 Smiling frog mascot
@@ -108,6 +137,7 @@ The date route uses `month/day` order, including February 29 validation. `/today
 ```text
 WebApiEfFluentApi.csproj
 Program.cs
+Birthdays.cs
 wwwroot/
   index.html
   site.css
@@ -117,6 +147,7 @@ wwwroot/
 App_Data/
   boards.json  # generated on first write
   namedays.json # generated after first nameday change
+  birthdays.json # generated after first birthday change
 Data/
   namedays.seed.json
 ```
