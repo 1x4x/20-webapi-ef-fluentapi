@@ -124,6 +124,39 @@ Responses include `id`, `age`, `nextBirthday`, `turningAge`, and `daysUntilBirth
 
 ⚠️ **Privacy and security:** Birthday dates and notes are personal information. This starter's endpoints are unauthenticated, so do not deploy with real personal data on a public server until authentication, authorization, and access controls are implemented.
 
+## 🇸🇪 Flag days CRUD API
+
+Manage recurring, fixed-date flag days in `App_Data/flagdays.json`, which is created on the first write. The API supports country filtering, today's flag days, upcoming celebrations, and complete CRUD. `FlagDayConfiguration` demonstrates EF Core Fluent API mapping; JSON storage is independent of EF Core.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| 🟢 GET | `/api/flagdays` | List all flag days |
+| 🔎 GET | `/api/flagdays?search=national&country=SE` | Filter by name and country |
+| 🇸🇪 GET | `/api/flagdays/today?country=SE` | Today's flag days |
+| 📅 GET | `/api/flagdays/date/6/6` | Flag days on June 6 |
+| ⏳ GET | `/api/flagdays/upcoming?days=30` | Upcoming flag days (0–366 days) |
+| 🟢 GET | `/api/flagdays/{id}` | Get a flag day |
+| 🔵 POST | `/api/flagdays` | Create |
+| 🟠 PUT | `/api/flagdays/{id}` | Update |
+| 🔴 DELETE | `/api/flagdays/{id}` | Delete |
+
+**Example** (`POST /api/flagdays`):
+
+```json
+{
+  "name": "Sveriges nationaldag",
+  "month": 6,
+  "day": 6,
+  "countryCode": "SE",
+  "description": "Swedish National Day",
+  "isOfficial": true
+}
+```
+
+Responses include `nextOccurrence` and `daysUntil`, calculated from the server-local date. The API currently supports **annual fixed dates**; movable holidays such as Easter and Midsummer are not calculated automatically. For February 29 entries, the anniversary falls on February 28 in non-leap years.
+
+No official flag-day list has been seeded: create the entries you want using the API. The `isOfficial` flag is user-managed and is not independently verified. **CRUD endpoints are currently unauthenticated**; secure them before public deployment.
+
 ## 🎨 Branding
 
 - 🐸 Smiling frog mascot
@@ -138,6 +171,7 @@ Responses include `id`, `age`, `nextBirthday`, `turningAge`, and `daysUntilBirth
 WebApiEfFluentApi.csproj
 Program.cs
 Birthdays.cs
+FlagDays.cs
 wwwroot/
   index.html
   site.css
@@ -148,6 +182,7 @@ App_Data/
   boards.json  # generated on first write
   namedays.json # generated after first nameday change
   birthdays.json # generated after first birthday change
+  flagdays.json # generated after first flag day change
 Data/
   namedays.seed.json
 ```

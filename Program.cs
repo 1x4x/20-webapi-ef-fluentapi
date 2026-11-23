@@ -6,6 +6,7 @@ builder.Services.AddDbContext<AppDb>(o=>o.UseInMemoryDatabase("fluent-model"));
 builder.Services.AddSingleton<JsonStore>();
 builder.Services.AddSingleton<NamedayStore>();
 builder.Services.AddSingleton<BirthdayStore>();
+builder.Services.AddSingleton<FlagDayStore>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app=builder.Build();
@@ -48,10 +49,36 @@ birthdays.MapPut("/{id:guid}", (Guid id, BirthdayInput input, BirthdayStore stor
 });
 birthdays.MapDelete("/{id:guid}", (Guid id, BirthdayStore store) =>
     store.Delete(id) ? Results.NoContent() : Results.NotFound());
+
+var flagdays = app.MapGroup("/api/flagdays").WithTags("Flag days");
+flagdays.MapGet("/", (FlagDayStore store, string? search, string? country) => Results.Ok(store.All(search, country)));
+flagdays.MapGet("/today", (FlagDayStore store, string? country) => Results.Ok(store.Today(country)));
+flagdays.MapGet("/upcoming", (FlagDayStore store, int? days, string? country) =>
+    days is < 0 or > 366 ? Results.BadRequest(new { error = "days must be between 0 and 366" })
+    : Results.Ok(store.Upcoming(days ?? 30, country)));
+flagdays.MapGet("/date/{month:int}/{day:int}", (int month, int day, FlagDayStore store, string? country) =>
+    DateOnly.TryParseExact($"2000-{month:D2}-{day:D2}", "yyyy-MM-dd", out _)
+        ? Results.Ok(store.ByDate(month, day, country))
+        : Results.BadRequest(new { error = "Invalid month/day" }));
+flagdays.MapGet("/{id:guid}", (Guid id, FlagDayStore store) =>
+    store.Find(id) is { } x ? Results.Ok(x) : Results.NotFound());
+flagdays.MapPost("/", (FlagDayInput input, FlagDayStore store) =>
+{
+    if (!FlagDayStore.Valid(input)) return Results.BadRequest(new { error = "Invalid name, month, day, countryCode or description" });
+    var created = store.Create(input);
+    return Results.Created($"/api/flagdays/{created.Id}", created);
+});
+flagdays.MapPut("/{id:guid}", (Guid id, FlagDayInput input, FlagDayStore store) =>
+{
+    if (!FlagDayStore.Valid(input)) return Results.BadRequest(new { error = "Invalid flag day details" });
+    return store.Update(id, input) is { } updated ? Results.Ok(updated) : Results.NotFound();
+});
+flagdays.MapDelete("/{id:guid}", (Guid id, FlagDayStore store) =>
+    store.Delete(id) ? Results.NoContent() : Results.NotFound());
 app.Run();
 public class Board {public Guid Id {get;set;} public string Name {get;set;}="New board";public List<BoardItem> Items {get;set;}=new();}
 public class BoardItem {public Guid Id {get;set;}=Guid.NewGuid();public Guid BoardId {get;set;}public string Text {get;set;}="";public bool Done {get;set;}}
-public class AppDb:DbContext {public AppDb(DbContextOptions<AppDb> options):base(options){} public DbSet<Board> Boards=>Set<Board>(); public DbSet<Nameday> Namedays=>Set<Nameday>(); public DbSet<Birthday> Birthdays=>Set<Birthday>(); public DbSet<BoardItem> Items=>Set<BoardItem>();protected override void OnModelCreating(ModelBuilder b){b.ApplyConfiguration(new BoardMap());b.ApplyConfiguration(new ItemMap());b.ApplyConfiguration(new NamedayMap());b.ApplyConfiguration(new BirthdayConfiguration());}}
+public class AppDb:DbContext {public AppDb(DbContextOptions<AppDb> options):base(options){} public DbSet<Board> Boards=>Set<Board>(); public DbSet<Nameday> Namedays=>Set<Nameday>(); public DbSet<Birthday> Birthdays=>Set<Birthday>(); public DbSet<FlagDay> FlagDays=>Set<FlagDay>(); public DbSet<BoardItem> Items=>Set<BoardItem>();protected override void OnModelCreating(ModelBuilder b){b.ApplyConfiguration(new BoardMap());b.ApplyConfiguration(new ItemMap());b.ApplyConfiguration(new NamedayMap());b.ApplyConfiguration(new BirthdayConfiguration());b.ApplyConfiguration(new FlagDayConfiguration());}}
 public class BoardMap:IEntityTypeConfiguration<Board>{public void Configure(EntityTypeBuilder<Board> b){b.HasKey(x=>x.Id);b.Property(x=>x.Name).IsRequired().HasMaxLength(120);b.HasMany(x=>x.Items).WithOne().HasForeignKey(x=>x.BoardId).OnDelete(DeleteBehavior.Cascade);}}
 public class ItemMap:IEntityTypeConfiguration<BoardItem>{public void Configure(EntityTypeBuilder<BoardItem> b){b.HasKey(x=>x.Id);b.Property(x=>x.Text).IsRequired().HasMaxLength(500);}}
 public class JsonStore {readonly string path=Path.Combine(AppContext.BaseDirectory,"App_Data","boards.json");readonly object gate=new();List<Board> Read(){if(!File.Exists(path))return new();return JsonSerializer.Deserialize<List<Board>>(File.ReadAllText(path))??new();}void Write(List<Board> data){Directory.CreateDirectory(Path.GetDirectoryName(path)!);var tmp=path+".tmp";File.WriteAllText(tmp,JsonSerializer.Serialize(data,new JsonSerializerOptions{WriteIndented=true}));File.Move(tmp,path,true);}public List<Board> All(){lock(gate)return Read();}public Board? Find(Guid id){lock(gate)return Read().FirstOrDefault(x=>x.Id==id);}public void Save(Board b){lock(gate){var d=Read();d.Add(b);Write(d);}}public bool Replace(Guid id,Board b){lock(gate){var d=Read();var i=d.FindIndex(x=>x.Id==id);if(i<0)return false;b.Id=id;d[i]=b;Write(d);return true;}}public bool Delete(Guid id){lock(gate){var d=Read();var ok=d.RemoveAll(x=>x.Id==id)>0;if(ok)Write(d);return ok;}}}
