@@ -61,6 +61,40 @@ Open the local address printed by `dotnet run`. Visit `/swagger` to explore the 
 | 🟠 PUT | `/api/boards/{id}` | Replace board |
 | 🔴 DELETE | `/api/boards/{id}` | Delete board |
 
+
+## 📅 Swedish namedays API
+
+The API includes **628 nameday records** from the supplied Swedish list. Seed data lives in `Data/namedays.seed.json`; the first modification creates `App_Data/namedays.json`. Subsequent reads and writes use that editable JSON file. The EF Core Fluent API mapping models the entity but does not persist the JSON.
+
+| Method | Route | Action |
+|---|---|---|
+| 🟢 GET | `/api/namedays` | List all namedays |
+| 🔎 GET | `/api/namedays?search=ann` | Search by name |
+| 🟢 GET | `/api/namedays/name/Valter` | Look up an exact name |
+| 📅 GET | `/api/namedays/date/8/17` | All names on 17 August |
+| ☀️ GET | `/api/namedays/today` | Names for server-local current date |
+| 🔵 POST | `/api/namedays` | Create a nameday |
+| 🟠 PUT | `/api/namedays/name/Valter` | Update a nameday |
+| 🔴 DELETE | `/api/namedays/name/Valter` | Delete a nameday |
+
+Example response for `GET /api/namedays/name/Valter`:
+
+```json
+{
+  "name": "Valter",
+  "day": 17,
+  "month": 8
+}
+```
+
+Create a nameday:
+
+```bash
+curl -X POST http://localhost:5000/api/namedays -H "Content-Type: application/json" -d '{"name":"Example","day":15,"month":6}'
+```
+
+The date route uses `month/day` order, including February 29 validation. `/today` uses the server's local clock. CRUD routes are currently unauthenticated, as in the existing starter API; add authentication before exposing them publicly.
+
 ## 🎨 Branding
 
 - 🐸 Smiling frog mascot
@@ -82,6 +116,9 @@ wwwroot/
     logo.svg
 App_Data/
   boards.json  # generated on first write
+  namedays.json # generated after first nameday change
+Data/
+  namedays.seed.json
 ```
 
 ## 🔒 Production notes
