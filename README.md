@@ -157,6 +157,36 @@ Responses include `nextOccurrence` and `daysUntil`, calculated from the server-l
 
 No official flag-day list has been seeded: create the entries you want using the API. The `isOfficial` flag is user-managed and is not independently verified. **CRUD endpoints are currently unauthenticated**; secure them before public deployment.
 
+## 🎨 Theme days CRUD API
+
+Create and manage annual **theme days** (temadagar), with categories such as Food, Awareness, Culture, and Technology. Entries are stored in `App_Data/themedays.json` on the first write; the `ThemeDayConfiguration` class defines the EF Core Fluent API model separately.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| 🟢 GET | `/api/themedays` | List all theme days |
+| 🔎 GET | `/api/themedays?search=coffee&category=Food` | Search and filter by category |
+| ☀️ GET | `/api/themedays/today` | Today's theme days |
+| 📅 GET | `/api/themedays/date/10/1` | Theme days on October 1 |
+| ⏳ GET | `/api/themedays/upcoming?days=30` | Upcoming theme days (0–366 days) |
+| 🟢 GET | `/api/themedays/{id}` | Get one theme day |
+| 🔵 POST | `/api/themedays` | Create a theme day |
+| 🟠 PUT | `/api/themedays/{id}` | Update a theme day |
+| 🔴 DELETE | `/api/themedays/{id}` | Delete a theme day |
+
+Example `POST /api/themedays` body:
+
+```json
+{
+  "name": "International Coffee Day",
+  "month": 10,
+  "day": 1,
+  "category": "Food",
+  "description": "A day to celebrate coffee"
+}
+```
+
+Responses also contain `id`, `nextOccurrence`, and `daysUntil`. Dates are recurring fixed month/day values; movable observances are not calculated. February 29 falls on February 28 in non-leap years for the next-occurrence calculation. No theme days are preloaded, so you can create your own catalog through the API. The write endpoints are currently unauthenticated; add authorization before public deployment.
+
 ## 🎨 Branding
 
 - 🐸 Smiling frog mascot
@@ -172,6 +202,7 @@ WebApiEfFluentApi.csproj
 Program.cs
 Birthdays.cs
 FlagDays.cs
+ThemeDays.cs
 wwwroot/
   index.html
   site.css
@@ -183,6 +214,7 @@ App_Data/
   namedays.json # generated after first nameday change
   birthdays.json # generated after first birthday change
   flagdays.json # generated after first flag day change
+  themedays.json # generated after first theme day change
 Data/
   namedays.seed.json
 ```

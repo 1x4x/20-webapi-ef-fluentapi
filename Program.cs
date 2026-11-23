@@ -7,6 +7,7 @@ builder.Services.AddSingleton<JsonStore>();
 builder.Services.AddSingleton<NamedayStore>();
 builder.Services.AddSingleton<BirthdayStore>();
 builder.Services.AddSingleton<FlagDayStore>();
+builder.Services.AddSingleton<ThemeDayStore>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 var app=builder.Build();
@@ -75,10 +76,38 @@ flagdays.MapPut("/{id:guid}", (Guid id, FlagDayInput input, FlagDayStore store) 
 });
 flagdays.MapDelete("/{id:guid}", (Guid id, FlagDayStore store) =>
     store.Delete(id) ? Results.NoContent() : Results.NotFound());
+
+var themedays = app.MapGroup("/api/themedays").WithTags("Theme days");
+themedays.MapGet("/", (ThemeDayStore store, string? search, string? category) =>
+    Results.Ok(store.All(search, category)));
+themedays.MapGet("/today", (ThemeDayStore store, string? category) =>
+    Results.Ok(store.Today(category)));
+themedays.MapGet("/upcoming", (ThemeDayStore store, int? days, string? category) =>
+    days is < 0 or > 366 ? Results.BadRequest(new { error = "days must be between 0 and 366" })
+    : Results.Ok(store.Upcoming(days ?? 30, category)));
+themedays.MapGet("/date/{month:int}/{day:int}", (int month, int day, ThemeDayStore store, string? category) =>
+    DateOnly.TryParseExact($"2000-{month:D2}-{day:D2}", "yyyy-MM-dd", out _)
+        ? Results.Ok(store.ByDate(month, day, category))
+        : Results.BadRequest(new { error = "Invalid month/day" }));
+themedays.MapGet("/{id:guid}", (Guid id, ThemeDayStore store) =>
+    store.Find(id) is { } x ? Results.Ok(x) : Results.NotFound());
+themedays.MapPost("/", (ThemeDayInput input, ThemeDayStore store) =>
+{
+    if (!ThemeDayStore.Valid(input)) return Results.BadRequest(new { error = "Invalid name, month, day, category or description" });
+    var created = store.Create(input);
+    return Results.Created($"/api/themedays/{created.Id}", created);
+});
+themedays.MapPut("/{id:guid}", (Guid id, ThemeDayInput input, ThemeDayStore store) =>
+{
+    if (!ThemeDayStore.Valid(input)) return Results.BadRequest(new { error = "Invalid theme day details" });
+    return store.Update(id, input) is { } updated ? Results.Ok(updated) : Results.NotFound();
+});
+themedays.MapDelete("/{id:guid}", (Guid id, ThemeDayStore store) =>
+    store.Delete(id) ? Results.NoContent() : Results.NotFound());
 app.Run();
 public class Board {public Guid Id {get;set;} public string Name {get;set;}="New board";public List<BoardItem> Items {get;set;}=new();}
 public class BoardItem {public Guid Id {get;set;}=Guid.NewGuid();public Guid BoardId {get;set;}public string Text {get;set;}="";public bool Done {get;set;}}
-public class AppDb:DbContext {public AppDb(DbContextOptions<AppDb> options):base(options){} public DbSet<Board> Boards=>Set<Board>(); public DbSet<Nameday> Namedays=>Set<Nameday>(); public DbSet<Birthday> Birthdays=>Set<Birthday>(); public DbSet<FlagDay> FlagDays=>Set<FlagDay>(); public DbSet<BoardItem> Items=>Set<BoardItem>();protected override void OnModelCreating(ModelBuilder b){b.ApplyConfiguration(new BoardMap());b.ApplyConfiguration(new ItemMap());b.ApplyConfiguration(new NamedayMap());b.ApplyConfiguration(new BirthdayConfiguration());b.ApplyConfiguration(new FlagDayConfiguration());}}
+public class AppDb:DbContext {public AppDb(DbContextOptions<AppDb> options):base(options){} public DbSet<Board> Boards=>Set<Board>(); public DbSet<Nameday> Namedays=>Set<Nameday>(); public DbSet<Birthday> Birthdays=>Set<Birthday>(); public DbSet<FlagDay> FlagDays=>Set<FlagDay>(); public DbSet<ThemeDay> ThemeDays=>Set<ThemeDay>(); public DbSet<BoardItem> Items=>Set<BoardItem>();protected override void OnModelCreating(ModelBuilder b){b.ApplyConfiguration(new BoardMap());b.ApplyConfiguration(new ItemMap());b.ApplyConfiguration(new NamedayMap());b.ApplyConfiguration(new BirthdayConfiguration());b.ApplyConfiguration(new FlagDayConfiguration());b.ApplyConfiguration(new ThemeDayConfiguration());}}
 public class BoardMap:IEntityTypeConfiguration<Board>{public void Configure(EntityTypeBuilder<Board> b){b.HasKey(x=>x.Id);b.Property(x=>x.Name).IsRequired().HasMaxLength(120);b.HasMany(x=>x.Items).WithOne().HasForeignKey(x=>x.BoardId).OnDelete(DeleteBehavior.Cascade);}}
 public class ItemMap:IEntityTypeConfiguration<BoardItem>{public void Configure(EntityTypeBuilder<BoardItem> b){b.HasKey(x=>x.Id);b.Property(x=>x.Text).IsRequired().HasMaxLength(500);}}
 public class JsonStore {readonly string path=Path.Combine(AppContext.BaseDirectory,"App_Data","boards.json");readonly object gate=new();List<Board> Read(){if(!File.Exists(path))return new();return JsonSerializer.Deserialize<List<Board>>(File.ReadAllText(path))??new();}void Write(List<Board> data){Directory.CreateDirectory(Path.GetDirectoryName(path)!);var tmp=path+".tmp";File.WriteAllText(tmp,JsonSerializer.Serialize(data,new JsonSerializerOptions{WriteIndented=true}));File.Move(tmp,path,true);}public List<Board> All(){lock(gate)return Read();}public Board? Find(Guid id){lock(gate)return Read().FirstOrDefault(x=>x.Id==id);}public void Save(Board b){lock(gate){var d=Read();d.Add(b);Write(d);}}public bool Replace(Guid id,Board b){lock(gate){var d=Read();var i=d.FindIndex(x=>x.Id==id);if(i<0)return false;b.Id=id;d[i]=b;Write(d);return true;}}public bool Delete(Guid id){lock(gate){var d=Read();var ok=d.RemoveAll(x=>x.Id==id)>0;if(ok)Write(d);return ok;}}}
