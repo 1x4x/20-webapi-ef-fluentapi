@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![WebAPI EF FluentAPI frog identity](wwwroot/assets/logo.svg)
+![WebAPI EF FluentAPI — green frog logo](webapi-ef-fluentapi-logo.png)
 
 **🌙 Dark mode · 💚 Forest green · ⚡ ASP.NET Core · 🗃️ JSON storage**
 
@@ -17,7 +17,13 @@
 
 A dark-green ASP.NET Core 8 REST API starter with a smiling frog and crescent-moon visual identity. The application uses one shared **SVG** logo in the site header, home hero, monitor wallboard and favicon.
 
-> 🎨 **Design previews:** The approved high-resolution frog PNG and dashboard screenshot from the chat are **not yet committed** to this repository. The image above is the currently deployed SVG variant, not the final PNG. The dashboard screenshot is a design mockup, not a verified running-app screenshot.
+The logo and dashboard preview below are the PNG assets uploaded to this repository. The dashboard image is a **design mockup**, not a verified screenshot of the running application.
+
+## 🖥️ Dashboard preview
+
+![Dark-green WebAPI EF FluentAPI dashboard design](webapi-ef-fluentapi-dashboard.png)
+
+*Dark-mode dashboard design concept featuring the frog identity, navigation, API panels, and green accents. Some pictured functionality is illustrative and is not implemented in this starter.*
 
 ## 🧰 Technology stack
 
@@ -82,6 +88,11 @@ App_Data/
 
 This is a starter demo, not a production-ready authenticated service. JSON writes are protected by a process-local lock only; they do not provide cross-process transactions. Add authentication, validation, durable database persistence and automated tests before production use.
 
-## 🖼️ Screenshots
+## 🖼️ Image assets
 
-The approved chat dashboard mockup and green frog PNG still need to be uploaded as binary image assets. No substitute screenshot is presented here as if it were a real capture.
+| Asset | File |
+|---|---|
+| 🐸 Approved frog logo | [webapi-ef-fluentapi-logo.png](webapi-ef-fluentapi-logo.png) |
+| 🖥️ Dashboard design preview | [webapi-ef-fluentapi-dashboard.png](webapi-ef-fluentapi-dashboard.png) |
+
+The running website currently references `wwwroot/assets/logo.svg`; the README showcases the uploaded PNG artwork.
